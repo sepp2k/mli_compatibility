@@ -37,5 +37,11 @@ let get_name_and_type_of_val (item: signature_item): (string * core_type) option
     | Psig_value value_desc -> Some (value_desc.pval_name.txt, value_desc.pval_type)
     | _ -> None
 
-let file1_val_names_to_types = create_map get_name_and_type_of_val ast1
-let () = Map.iteri ~f:(fun ~key ~data -> Format.printf "%s: %a@." key Pprintast.core_type data) file1_val_names_to_types
+let file1_types = create_map get_name_and_type_of_val ast1
+let file2_types = create_map get_name_and_type_of_val ast2
+let () = Map.iter2 file1_types file2_types ~f:(fun ~key:name ~data ->
+    match data with
+    | `Both (type1, type2) ->
+        Format.printf "%s: %a  VS  %a@." name Pprintast.core_type type1 Pprintast.core_type type2
+    | _ -> ()
+)
