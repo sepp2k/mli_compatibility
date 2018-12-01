@@ -1,0 +1,3 @@
+(executable
+ (name mli_analyser)
+ (libraries ocaml-compiler-libs.common))
