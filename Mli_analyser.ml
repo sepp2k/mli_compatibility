@@ -1,22 +1,26 @@
 open Ocaml_common
 open Parsetree
-
-module StringMap = Map.Make(String)
+open Core
 
 let parse_mli file =
-    let in_chan = open_in file in
-    let lexbuf = Lexing.from_channel in_chan in
-    let ast = Parser.interface Lexer.token lexbuf in
-    close_in in_chan;
-    ast
+    In_channel.with_file file ~binary:false ~f:(fun in_file ->
+        let lexbuf = Lexing.from_channel in_file in
+        Parser.interface Lexer.token lexbuf
+    )
 
-let create_map (f: 'a -> (string * 'b) option) (xs: 'a list): 'b StringMap.t =
+type ('k, 'v) map = ('k, 'v) Map.Poly.t
+
+let create_map (f: 'a -> ('k * 'v) option) (xs: 'a list): ('k, 'v) map =
     let folder acc x =
         match f x with
-        | Some (key, value) -> StringMap.add key value acc
+        | Some (key, value) ->
+            begin match Map.add acc ~key ~data:value with
+            | `Ok result -> result
+            | `Duplicate -> failwith "Duplicate key in map creation"
+            end
         | None -> acc
     in
-    List.fold_left folder StringMap.empty xs
+    List.fold_left ~f:folder ~init:Map.Poly.empty xs
 
 let () =
     if Array.length Sys.argv <> 3
@@ -34,4 +38,4 @@ let get_name_and_type_of_val (item: signature_item): (string * core_type) option
     | _ -> None
 
 let file1_val_names_to_types = create_map get_name_and_type_of_val ast1
-let () = StringMap.iter (fun name typ -> Format.printf "%s: %a@." name Pprintast.core_type typ) file1_val_names_to_types
+let () = Map.iteri ~f:(fun ~key ~data -> Format.printf "%s: %a@." key Pprintast.core_type data) file1_val_names_to_types
